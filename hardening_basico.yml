@@ -1,0 +1,68 @@
+---
+- name: Hardening adicional del sistema
+  hosts: production
+  become: yes
+
+  tasks:
+    - name: Configurar permisos seguros en /etc/shadow
+      file:
+        path: /etc/shadow
+        owner: root
+        group: shadow
+        mode: '0640'
+
+    - name: Deshabilitar acceso root por SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify: reiniciar ssh
+
+    - name: Deshabilitar autenticación por contraseña SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+      notify: reiniciar ssh
+
+    - name: Configurar banner SSH
+      copy:
+        content: |
+          **********************************************************
+          * Acceso restringido únicamente a personal autorizado. *
+          * Todas las actividades son monitorizadas y registradas.*
+          **********************************************************
+        dest: /etc/ssh/banner
+        mode: '0644'
+
+    - name: Configurar Banner en SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Banner'
+        line: 'Banner /etc/ssh/banner'
+
+    - name: Limitar intentos de contraseña SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?MaxAuthTries'
+        line: 'MaxAuthTries 3'
+
+    - name: Configurar sysctl para seguridad de red
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: yes
+      loop:
+        - { name: 'net.ipv4.conf.all.rp_filter', value: '1' }
+        - { name: 'net.ipv4.conf.default.rp_filter', value: '1' }
+        - { name: 'net.ipv4.tcp_syncookies', value: '1' }
+        - { name: 'net.ipv4.icmp_echo_ignore_broadcasts', value: '1' }
+        - { name: 'net.ipv4.conf.all.accept_source_route', value: '0' }
+        - { name: 'net.ipv6.conf.all.accept_source_route', value: '0' }
+
+  handlers:
+    - name: reiniciar ssh
+      systemd:
+        name: ssh
+        state: restarted
