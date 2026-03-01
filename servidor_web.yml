@@ -1,0 +1,113 @@
+---
+- name: Configuración inicial del servidor web
+  hosts: production
+  become: yes
+  gather_facts: yes
+
+  vars:
+    nginx_port: 80
+    nginx_user: www-data
+    packages_requeridos:
+      - nginx
+      - ufw
+      - curl
+      - wget
+      - net-tools
+    puertos_permitidos:
+      - 80
+      - 443
+    puertos_bloqueados:
+      - 21    # FTP
+      - 23    # Telnet
+      - 25    # SMTP
+      - 111   # RPC
+      - 445   # Samba
+
+  tasks:
+    - name: Actualizar índice de paquetes
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Instalar paquetes requeridos
+      apt:
+        name: "{{ packages_requeridos }}"
+        state: present
+
+    - name: Iniciar y habilitar Nginx
+      systemd:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Configurar reglas UFW por defecto
+      ufw:
+        direction: "{{ item.direction }}"
+        policy: "{{ item.policy }}"
+      loop:
+        - { direction: 'incoming', policy: 'deny' }
+        - { direction: 'outgoing', policy: 'allow' }
+
+    - name: Permitir puertos necesarios en UFW
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop: "{{ puertos_permitidos }}"
+
+    - name: Denegar explícitamente puertos inseguros
+      ufw:
+        rule: deny
+        port: "{{ item }}"
+        proto: tcp
+      loop: "{{ puertos_bloqueados }}"
+
+    - name: Habilitar UFW (no interactivo)
+      ufw:
+        state: enabled
+        policy: deny
+
+    - name: Verificar servicios escuchando puertos
+      command: netstat -tulpn
+      register: puertos_activos
+      changed_when: false
+
+    - name: Mostrar puertos activos
+      debug:
+        var: puertos_activos.stdout_lines
+
+    - name: Crear página web personalizada
+      copy:
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Servidor Hardened - Práctica 3</title>
+              <style>
+                  body { font-family: Arial; margin: 40px; background: #f0f0f0; }
+                  h1 { color: #333; }
+                  .success { color: green; font-weight: bold; }
+              </style>
+          </head>
+          <body>
+              <h1>Servidor Nginx Hardened</h1>
+              <p class="success">✓ Configuración completada exitosamente</p>
+              <p>Este servidor ha sido configurado siguiendo buenas prácticas de hardening.</p>
+              <h3>Puertos permitidos:</h3>
+              <ul>
+              {% for port in puertos_permitidos %}
+                  <li>Puerto {{ port }} (TCP)</li>
+              {% endfor %}
+              </ul>
+              <p><small>Generado por Ansible - Práctica 3</small></p>
+          </body>
+          </html>
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    - name: Recargar Nginx para aplicar cambios
+      systemd:
+        name: nginx
+        state: reloaded
