@@ -1,1 +1,61 @@
 
+---
+# Configuración para DevSec Hardening
+# OS Hardening
+os_security_users_allow: []
+os_security_kernel_enable_module_loading: true
+os_security_kernel_enable_sysrq: false
+os_security_kernel_enable_core_dump: false
+
+os_auth_pam_passwdqc_enable: false
+os_auth_retries: 5
+os_auth_lockout_time: 600
+os_auth_timeout: 60
+os_auth_allow_homeless: false
+
+os_security_packages_clean: true
+os_security_packages_list:
+  - telnet
+  - rsh-server
+  - rsh-client
+  - talk
+  - talkd
+  - nis
+  - ypbind
+  - tftp
+  - tftpd
+
+# SSH Hardening
+ssh_server_ports: ['22']
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 0
+ssh_max_sessions: 10
+ssh_max_startups: '10:30:60'
+ssh_use_pam: true
+ssh_permit_root_login: 'no'
+ssh_password_authentication: 'no'
+ssh_pubkey_authentication: 'yes'
+ssh_allow_tcp_forwarding: 'no'
+ssh_x11_forwarding: 'no'
+ssh_compression: 'no'
+ssh_print_motd: 'yes'
+ssh_print_last_log: 'yes'
+ssh_ignore_rhosts: 'yes'
+ssh_hostbased_authentication: 'no'
+
+# Sysctl hardening
+sysctl_config:
+  net.ipv4.ip_forward: 0
+  net.ipv6.conf.all.forwarding: 0
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.default.rp_filter: 1
+  net.ipv4.tcp_syncookies: 1
+  net.ipv4.icmp_echo_ignore_broadcasts: 1
+  net.ipv4.icmp_ignore_bogus_error_responses: 1
+  net.ipv4.conf.all.accept_source_route: 0
+  net.ipv6.conf.all.accept_source_route: 0
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv6.conf.all.accept_redirects: 0
+  net.ipv4.conf.all.secure_redirects: 0
+  net.ipv4.conf.all.send_redirects: 0
+  kernel.randomize_va_space: 2
