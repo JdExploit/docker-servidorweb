@@ -1,0 +1,19 @@
+---
+- name: "PRÁCTICA 3: Hardening y Auditoría - Configuración completa"
+  hosts: production
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Mostrar información del sistema
+      debug:
+        msg:
+          - "Iniciando configuración en {{ ansible_hostname }}"
+          - "Distribución: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "Arquitectura: {{ ansible_architecture }}"
+
+- name: "TAREA A: Instalación y configuración de Nginx"
+  import_playbook: servidor_web.yml
+
+- name: "TAREA B: Aplicar hardening básico"
+  import_playbook: hardening_basico.yml
